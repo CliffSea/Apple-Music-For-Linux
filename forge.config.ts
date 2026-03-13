@@ -10,13 +10,18 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    download: {
+      mirrorOptions: {
+        mirror: 'https://github.com/castlabs/electron-releases/releases/download/',
+      }
+    }
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
-    new MakerZIP({}, ['darwin']),
-    new MakerRpm({}),
-    new MakerDeb({}),
+    //new MakerSquirrel({}),
+    new MakerZIP({}, ['darwin', 'linux']),
+    //new MakerRpm({}),
+    //new MakerDeb({}),
   ],
   plugins: [
     new VitePlugin({
