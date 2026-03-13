@@ -28,8 +28,13 @@ window.addEventListener("DOMContentLoaded", async () => {
           <h4>Last.fm Scrobbling</h4>
           <p id="lfm-status" style="font-size: 13px; color: #ccc; margin: 0 0 8px 0;">
             ${settings.lastFmToken ? 'Account Connected' : 'Not Logged In'}
-
           </p>
+
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; margin-bottom: 12px;">
+            <input type="checkbox" id="notify-toggle" ${settings.scrobbleNotifications ? 'checked' : ''} style="width: 14px; height: 14px;">
+            Show Desktop Notifications
+          </label>
+
           <button id="lfm-login-btn" class="am-btn">1. Authorize in Browser</button>
           <button id="lfm-confirm-btn" class="am-btn success">2. I have authorized!</button>
           <button id="lfm-logout-btn" class="am-btn">Log out</button>
@@ -85,7 +90,8 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     saveBtn.addEventListener('click', () => {
         const newSettings = {
-            discordRpc: (document.getElementById('discord-toggle') as HTMLInputElement).checked
+            discordRpc: (document.getElementById('discord-toggle') as HTMLInputElement).checked,
+            scrobbleNotifications: (document.getElementById('notify-toggle') as HTMLInputElement).checked
         };
 
         ipcRenderer.send('save-settings', newSettings);
@@ -101,6 +107,13 @@ window.addEventListener("DOMContentLoaded", async () => {
 
         ipcRenderer.send('save-settings', newSettings);
         lfmLogoutBtn.style.display = 'none';
+        lfmConfirmBtn.style.display = 'none';
+        
+        lfmLoginBtn.style.display = 'block';
+        lfmLoginBtn.innerText = "1. Authorize in Browser";
+        
+        lfmStatus.innerText = "Not Logged In";
+        lfmStatus.style.color = "#ccc";
     })
 });
 

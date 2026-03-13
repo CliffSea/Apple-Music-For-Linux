@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { shell } from 'electron';
+import { shell, Notification, nativeImage } from 'electron';
 
 const LASTFM_API_KEY = 'c956b7bb4233e011e39c02fdc3329d6a';
 const LASTFM_SECRET = 'bb02c780cc2227dcb6f0c365af5d5531';
@@ -11,11 +11,11 @@ let hasSentNowPlaying = false;
 
 let pendingToken = '';
 
-function generateSignature(params: Record<string, string>){
+function generateSignature(params: Record<string, string>) {
     const keys = Object.keys(params).sort();
     let sig = '';
 
-    for (const key of keys){
+    for (const key of keys) {
         if (key !== 'format' && key !== 'callback') {
             sig += key + params[key];
         }
@@ -26,30 +26,30 @@ function generateSignature(params: Record<string, string>){
 }
 
 async function postLastFm(params: Record<string, string>) {
-  params.api_key = LASTFM_API_KEY;
-  params.api_sig = generateSignature(params); 
-  params.format = 'json';
+    params.api_key = LASTFM_API_KEY;
+    params.api_sig = generateSignature(params);
+    params.format = 'json';
 
-  const body = new URLSearchParams(params);
+    const body = new URLSearchParams(params);
 
-  try {
-    const res = await fetch('http://ws.audioscrobbler.com/2.0/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString()
-    });
-    return await res.json();
-  } catch (err) {
-    console.error("Last.fm POST error:", err);
-    return null;
-  }
+    try {
+        const res = await fetch('http://ws.audioscrobbler.com/2.0/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+        });
+        return await res.json();
+    } catch (err) {
+        console.error("Last.fm POST error:", err);
+        return null;
+    }
 }
 
 
 export async function startAuthFlow() {
-    const params = {method : 'auth.getToken', api_key: LASTFM_API_KEY};
+    const params = { method: 'auth.getToken', api_key: LASTFM_API_KEY };
     const api_sig = generateSignature(params);
-    
+
 
     try {
         const res = await fetch(`http://ws.audioscrobbler.com/2.0/?method=auth.getToken&api_key=${LASTFM_API_KEY}&api_sig=${api_sig}&format=json`);
@@ -70,7 +70,7 @@ export async function startAuthFlow() {
 export async function completeAuthFlow() {
     if (!pendingToken) return null;
 
-    const params = {method : 'auth.getSession', api_key: LASTFM_API_KEY, token: pendingToken};
+    const params = { method: 'auth.getSession', api_key: LASTFM_API_KEY, token: pendingToken };
     const api_sig = generateSignature(params);
 
     try {
@@ -84,45 +84,45 @@ export async function completeAuthFlow() {
             };
         }
     } catch (err) {
-        console.log("lastfm session error" , err);
+        console.log("lastfm session error", err);
     }
 
     return null;
 }
 
 export async function updateNowPlaying(trackInfo: any, sessionKey: string) {
-  if (!sessionKey || !trackInfo) return;
+    if (!sessionKey || !trackInfo) return;
 
-  console.log(`Last.fm: Now Playing -> ${trackInfo.track}`);
-  
-  return postLastFm({
-    method: 'track.updateNowPlaying',
-    artist: trackInfo.artist,
-    track: trackInfo.track,
-    album: trackInfo.album || '',
-    duration: Math.floor(trackInfo.duration).toString(),
-    sk: sessionKey
-  });
+    console.log(`Last.fm: Now Playing -> ${trackInfo.track}`);
+
+    return postLastFm({
+        method: 'track.updateNowPlaying',
+        artist: trackInfo.artist,
+        track: trackInfo.track,
+        album: trackInfo.album || '',
+        duration: Math.floor(trackInfo.duration).toString(),
+        sk: sessionKey
+    });
 }
 
 export async function scrobbleTrack(trackInfo: any, timestampSeconds: number, sessionKey: string) {
-  if (!sessionKey || !trackInfo) return;
+    if (!sessionKey || !trackInfo) return;
 
-  console.log(`Last.fm: Scrobbled -> ${trackInfo.track}`);
+    console.log(`Last.fm: Scrobbled -> ${trackInfo.track}`);
 
-  return postLastFm({
-    method: 'track.scrobble',
-    artist: trackInfo.artist,
-    track: trackInfo.track,
-    album: trackInfo.album || '',
-    timestamp: timestampSeconds.toString(), 
-    sk: sessionKey
-  });
+    return postLastFm({
+        method: 'track.scrobble',
+        artist: trackInfo.artist,
+        track: trackInfo.track,
+        album: trackInfo.album || '',
+        timestamp: timestampSeconds.toString(),
+        sk: sessionKey
+    });
 }
 
 
-export async function processScrobble(trackInfo: any, isPlaying: boolean, sessionKey: string) {
-    if(!sessionKey || !trackInfo) return;
+export async function processScrobble(trackInfo: any, isPlaying: boolean, sessionKey: string, showNotification: boolean) {
+    if (!sessionKey || !trackInfo) return;
 
     if (trackInfo.uniqueID !== currentScrobbleId) {
         currentScrobbleId = trackInfo.uniqueID;
@@ -132,17 +132,42 @@ export async function processScrobble(trackInfo: any, isPlaying: boolean, sessio
     }
 
     if (isPlaying && !hasSentNowPlaying) {
-            hasSentNowPlaying = true;
+        hasSentNowPlaying = true;
 
-            updateNowPlaying(trackInfo, sessionKey).catch(console.error);
+        updateNowPlaying(trackInfo, sessionKey).catch(console.error);
+
+        if (showNotification) {
+            console.log("notification trigger");
+            try {
+
+                let iconImage;
+
+                if (trackInfo.trackArt) {
+                    const response = await fetch(trackInfo.trackArt);
+                    const imageBuffer = await response.arrayBuffer();
+
+                    iconImage = nativeImage.createFromBuffer(Buffer.from(imageBuffer))
+                }
+
+                new Notification({
+                    title: 'Scrobbler',
+                    body: `${trackInfo.track}\n${trackInfo.artist}\n${trackInfo.album}`,
+                    icon: iconImage
+                }).show();
+            } catch (error) {
+                console.log("noti error", error);
+
+            }
+
         }
+    }
 
-    if(hasScrobbled || !isPlaying || trackInfo.duration < 30) return;
+    if (hasScrobbled || !isPlaying || trackInfo.duration < 30) return;
 
     const playThreshold = Math.min(trackInfo.duration / 2, 240)
 
 
-    if(trackInfo.currentTime >= playThreshold){
+    if (trackInfo.currentTime >= playThreshold) {
         hasScrobbled = true;
 
         scrobbleTrack(trackInfo, trackStartTime, sessionKey).catch(console.error);
