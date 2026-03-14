@@ -1,8 +1,7 @@
 {
   "name": "apple_music",
-  "productName": "apple_music",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "",
   "main": ".vite/build/main.js",
   "private": true,
   "scripts": {
@@ -10,7 +9,30 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint --ext .ts,.tsx .",
+    "appimage": "bun run package && electron-builder --linux appimage"
+  },
+  "build": {
+    "appId": "com.sam.applemusic",
+    "productName": "Apple Music",
+    "electronDownload": {
+      "mirror": "https://github.com/castlabs/electron-releases/releases/download/"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "AudioVideo",
+      "executableName": "apple_music",
+      "icon": "build/icon.png"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "directories": {
+      "output": "out/make/appimage",
+      "buildResources": "build"
+    }
   },
   "keywords": [],
   "author": {
@@ -34,6 +56,7 @@
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "electron": "https://github.com/castlabs/electron-releases#v40.7.0+wvcus",
+    "electron-builder": "^26.8.1",
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
     "typescript": "~4.5.4",

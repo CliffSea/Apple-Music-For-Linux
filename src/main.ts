@@ -1,5 +1,6 @@
-import { app, BrowserWindow, components, ipcMain } from 'electron';
+import { app, BrowserWindow, components, ipcMain, nativeImage } from 'electron';
 import path from 'node:path';
+import os from 'node:os'
 import started from 'electron-squirrel-startup';
 import { readFileSync } from 'node:fs';
 import { loadSettings, saveSettings } from './services/settings';
@@ -9,12 +10,22 @@ import { completeAuthFlow, processScrobble, startAuthFlow } from './services/scr
 let mainWindow: BrowserWindow = null;
 const gotTheLock = app.requestSingleInstanceLock()
 
+const iconPath = path.join(__dirname, 'assets','icon.png' )
+const icon = nativeImage.createFromPath(iconPath);
+
 if (started) {
   app.quit();
 }
 
 let userSettings = loadSettings();
 let isQuitting = false;
+
+if(process.platform == 'linux' && process.env.APPIMAGE){
+  const uid = os.userInfo().uid;
+
+  process.env.XDG_RUNTIME_DIR = `/run/user/${uid}`;
+  process.env.TMPDIR = '/tmp'
+}
 
 connectRPC();
 
@@ -74,6 +85,7 @@ const initWindow = () => {
     height: 600,
     minHeight: 300,
     minWidth: 400,
+    icon: icon,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true
