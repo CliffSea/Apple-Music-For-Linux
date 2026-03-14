@@ -54,7 +54,7 @@ export async function updatePresence(trackInfo: any, isPlaying: boolean, discord
             startTimestamp,
             endTimestamp,
             largeImageKey: trackInfo.trackArt,
-            largeImageText: trackInfo.album,
+            largeImageText: trackInfo.album + " ",
             type: 2,
         }).catch(console.error);
     }
